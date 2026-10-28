@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0d1116">
+<meta name="description" content="SAVAŞ ALANI — tarayıcıda oynanan, gerçek zamanlı çok oyunculu 3D savaş oyunu. Takım ölüm maçı, gelişmiş grafikler, 3B askerler ve bot düşmanlar.">
+<title>SAVAŞ ALANI — 3D Multiplayer Savaş Oyunu</title>
+<link rel="stylesheet" href="./css/style.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three/three.module.js",
+    "three/addons/": "./vendor/three/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+
+<canvas id="game-canvas"></canvas>
+<div id="vignette"></div>
+<div id="damage-flash"></div>
+<div id="muzzle-vignette"></div>
+
+<!-- ============================ ANA MENÜ ============================ -->
+<div id="menu" class="screen">
+  <div class="menu-noise"></div>
+  <div class="menu-grid"></div>
+  <div class="menu-inner">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 3 58 13v18c0 16-11 25-26 30C17 56 6 47 6 31V13z" fill="none" stroke="currentColor" stroke-width="3"/><path d="M32 14v34M16 31h32" stroke="currentColor" stroke-width="3"/><circle cx="32" cy="31" r="8" fill="none" stroke="currentColor" stroke-width="3"/></svg>
+      </div>
+      <div class="brand-text">
+        <div class="brand-sub">OPERATION DUST // v1.0</div>
+        <h1>SAVAŞ <span>ALANI</span></h1>
+        <div class="brand-tag">GERÇEK ZAMANLI • ÇOK OYUNCULU • 3D TAKIM SAVAŞI</div>
+      </div>
+    </div>
+
+    <div class="menu-columns">
+      <section class="menu-info">
+        <div class="info-head"><span class="line"></span> GÖREV BRİFİNGİ</div>
+        <p class="lead">İki takım, bir harabe şehir, tek hedef: <b>50 öldürme</b>. Arkadaşlarınla odaya gir, birlikte savaş, savaş alanından sağ çık.</p>
+        <ul class="feature-list">
+          <li><span class="fi">01</span><div><b>WebGL 3D Grafik</b><small>Fiziksel materyaller, dinamik gölgeler, bloom, atmosferik sis, parçacık efektleri</small></div></li>
+          <li><span class="fi">02</span><div><b>Animasyonlu 3B Askerler</b><small>İskelet animasyonlu karakterler, teçhizat, silah ve isim etiketleri</small></div></li>
+          <li><span class="fi">03</span><div><b>Canlı Multiplayer</b><small>Oda koduyla arkadaşlarını davet et, anlık eşitleme ve sohbet</small></div></li>
+          <li><span class="fi">04</span><div><b>3 Silah + El Bombası</b><small>M4A1, MP5, M110 — nişan alma, geri tepme, kovan ve izli mermi</small></div></li>
+        </ul>
+        <div class="controls-hint">
+          <div><kbd>W A S D</kbd> hareket</div><div><kbd>SHIFT</kbd> koş</div><div><kbd>CTRL</kbd> çömel</div>
+          <div><kbd>BOŞLUK</kbd> zıpla</div><div><kbd>SOL TIK</kbd> ateş</div><div><kbd>SAĞ TIK</kbd> nişan</div>
+          <div><kbd>R</kbd> şarjör</div><div><kbd>G</kbd> bomba</div><div><kbd>1 2 3</kbd> silah</div>
+          <div><kbd>TAB</kbd> skor</div><div><kbd>ENTER</kbd> sohbet</div><div><kbd>ESC</kbd> menü</div>
+        </div>
+      </section>
+
+      <section class="menu-form">
+        <div class="form-head"><span class="line"></span> SEFERBERLİK</div>
+        <label class="field-label" for="player-name">ÇAĞRI ADIN</label>
+        <input id="player-name" class="text-input" type="text" maxlength="16" placeholder="Örn. BOZKURT-01" autocomplete="off">
+
+        <div class="field-label">OYUN MODU</div>
+        <div class="mode-tabs">
+          <button class="mode-tab active" data-mode="online"><b>ÇEVRİMİÇİ</b><small>Genel oda</small></button>
+          <button class="mode-tab" data-mode="private"><b>ÖZEL ODA</b><small>Arkadaşlarınla</small></button>
+          <button class="mode-tab" data-mode="solo"><b>BOTLARA KARŞI</b><small>Tek başına</small></button>
+        </div>
+
+        <div id="room-row" class="hidden">
+          <label class="field-label" for="room-code">ODA KODU</label>
+          <div class="room-input-row">
+            <input id="room-code" class="text-input" type="text" maxlength="12" placeholder="5 haneli kod" autocomplete="off">
+            <button id="room-random" class="icon-btn" title="Rastgele kod">↻</button>
+          </div>
+          <div class="room-note">Aynı kodu giren herkes aynı savaşa katılır. Bağlantı: <span id="room-link">—</span> <button id="copy-link" class="mini-btn">KOPYALA</button></div>
+        </div>
+
+        <div id="bot-row" class="hidden">
+          <label class="field-label" for="bot-count">DÜŞMAN SAYISI: <span id="bot-count-val">8</span></label>
+          <input id="bot-count" class="slider" type="range" min="2" max="16" value="8">
+          <label class="field-label" for="bot-diff">ZORLUK: <span id="bot-diff-val">NORMAL</span></label>
+          <input id="bot-diff" class="slider" type="range" min="0" max="2" value="1">
+        </div>
+
+        <div class="field-label">TAKIM</div>
+        <div class="team-tabs">
+          <button class="team-tab active" data-team="blue"><span class="tdot blue"></span> MAVİ TAKIM</button>
+          <button class="team-tab" data-team="red"><span class="tdot red"></span> KIRMIZI TAKIM</button>
+          <button class="team-tab" data-team="auto"><span class="tdot auto"></span> OTOMATİK</button>
+        </div>
+
+        <div class="field-label">GRAFİK KALİTESİ</div>
+        <div class="quality-tabs">
+          <button class="q-tab" data-q="low">DÜŞÜK</button>
+          <button class="q-tab active" data-q="high">YÜKSEK</button>
+          <button class="q-tab" data-q="ultra">ULTRA</button>
+        </div>
+
+        <button id="play-btn" class="play-btn"><span class="play-icon">▶</span><span>SAVAŞA GİR</span><small id="play-hint">HEMEN BAŞLA</small></button>
+        <div id="menu-status" class="menu-status">Hazır. İnternet bağlantısı olan herkesle aynı odada savaşabilirsin.</div>
+      </section>
+    </div>
+
+    <footer class="menu-footer">
+      <span>© 2026 SAVAŞ ALANI</span>
+      <span class="sep">//</span>
+      <span>THREE.JS WEBGL MOTORU</span>
+      <span class="sep">//</span>
+      <span>KLAVYE + FARE (MOBİL DESTEKLİ)</span>
+      <button id="settings-btn" class="mini-btn">⚙ AYARLAR</button>
+    </footer>
+  </div>
+</div>
+
+<!-- ============================ YÜKLEME ============================ -->
+<div id="loading" class="screen hidden">
+  <div class="loading-box">
+    <div class="loading-title">SAVAŞ ALANI <span>YÜKLENİYOR</span></div>
+    <div class="loading-bar"><div id="loading-fill"></div></div>
+    <div id="loading-text" class="loading-text">3B motor başlatılıyor…</div>
+    <div id="loading-tip" class="loading-tip">İpucu: Sağ tık ile nişan almak isabetini ciddi artırır.</div>
+  </div>
+</div>
+
+<!-- ============================ HUD ============================ -->
+<div id="hud" class="hidden">
+  <div id="topbar">
+    <div class="score-side blue"><span class="score-label">MAVİ</span><span id="score-blue" class="score-num">0</span></div>
+    <div class="match-timer"><div id="match-time">08:00</div><div class="timer-label">HEDEF <span id="score-limit">50</span> ÖLDÜRME</div></div>
+    <div class="score-side red"><span id="score-red" class="score-num">0</span><span class="score-label">KIRMIZI</span></div>
+  </div>
+
+  <div id="crosshair"><i class="ch ch-t"></i><i class="ch ch-b"></i><i class="ch ch-l"></i><i class="ch ch-r"></i><i class="ch-dot"></i></div>
+  <div id="hitmarker"><span></span><span></span><span></span><span></span></div>
+  <div id="damage-numbers"></div>
+  <div id="damage-indicators"></div>
+  <div id="killfeed"></div>
+  <div id="kill-banner"></div>
+
+  <div id="minimap-wrap">
+    <canvas id="minimap" width="220" height="220"></canvas>
+    <div class="minimap-frame"></div>
+    <div id="minimap-label">TACTICAL MAP</div>
+  </div>
+
+  <div id="bottom-left">
+    <div class="hp-row"><div class="hp-icon">✚</div><div class="hp-bar"><div id="hp-fill"></div><div id="hp-ghost"></div></div><div id="hp-num">100</div></div>
+    <div class="player-id"><span id="hud-name">ASKER</span><span class="bullet">•</span><span id="hud-team">MAVİ TAKIM</span></div>
+  </div>
+
+  <div id="bottom-right">
+    <div class="weapon-line"><span id="weapon-name">M4A1 KARABİN</span><span id="weapon-mode">TAM OTOMATİK</span></div>
+    <div class="ammo-row"><span id="ammo-mag">30</span><span class="ammo-slash">/</span><span id="ammo-reserve">180</span></div>
+    <div id="reload-wrap" class="reload-wrap hidden"><div id="reload-fill"></div><span>ŞARJÖR DEĞİŞİYOR</span></div>
+    <div class="grenade-line"><span class="grenade-icon">◉</span><span id="grenade-count">2</span> EL BOMBASI <kbd>G</kbd></div>
+    <div class="weapon-slots"><span class="slot active" data-slot="1">1 M4A1</span><span class="slot" data-slot="2">2 MP5</span><span class="slot" data-slot="3">3 M110</span></div>
+  </div>
+
+  <div id="net-status"><span class="net-dot"></span><span id="net-text">BAĞLANIYOR…</span><span id="ping-text"></span><span id="players-text"></span></div>
+  <div id="fps-counter"></div>
+  <div id="chat-box"><div id="chat-messages"></div><input id="chat-input" class="hidden" type="text" maxlength="120" placeholder="Mesaj yaz… (Enter: gönder, Esc: iptal)"></div>
+  <div id="respawn" class="hidden"><div class="respawn-title">ÖLDÜN</div><div class="respawn-by" id="respawn-by"></div><div class="respawn-count">YENİDEN DOĞMA: <span id="respawn-sec">3</span></div><div class="respawn-bar"><div id="respawn-fill"></div></div></div>
+  <div id="scope-overlay" class="hidden"><div class="scope-ring"><div class="scope-cross-h"></div><div class="scope-cross-v"></div><div class="scope-mil"></div></div></div>
+  <div id="low-hp"></div>
+</div>
+
+<!-- ============================ SKOR TABLOSU ============================ -->
+<div id="scoreboard" class="hidden">
+  <div class="sb-head"><span>SAVAŞ DURUMU</span><span id="sb-room">GENEL ODA</span></div>
+  <div class="sb-scores"><div class="sb-team blue"><span>MAVİ TAKIM</span><b id="sb-blue">0</b></div><div class="sb-team red"><b id="sb-red">0</b><span>KIRMIZI TAKIM</span></div></div>
+  <div class="sb-table-wrap"><table class="sb-table"><thead><tr><th>OYUNCU</th><th>ÖLDÜRME</th><th>ÖLÜM</th><th>PİNG</th></tr></thead><tbody id="sb-body"></tbody></table></div>
+  <div class="sb-foot">TAB ile kapat</div>
+</div>
+
+<!-- ============================ DURAKLAT / AYARLAR ============================ -->
+<div id="pause" class="screen hidden">
+  <div class="modal">
+    <h2>DURAKLATILDI</h2>
+    <button id="resume-btn" class="modal-btn primary">SAVAŞA DÖN</button>
+    <button id="pause-settings-btn" class="modal-btn">AYARLAR</button>
+    <button id="quit-btn" class="modal-btn danger">ANA MENÜYE ÇIK</button>
+  </div>
+</div>
+
+<div id="settings" class="screen hidden">
+  <div class="modal wide">
+    <h2>AYARLAR</h2>
+    <label class="set-row"><span>FARE DUYARLILIĞI <b id="sens-val">1.00</b></span><input id="set-sens" type="range" min="0.2" max="3" step="0.05" value="1"></label>
+    <label class="set-row"><span>SES SEVİYESİ <b id="vol-val">60%</b></span><input id="set-vol" type="range" min="0" max="1" step="0.05" value="0.6"></label>
+    <label class="set-row"><span>GÖRÜŞ ALANI (FOV) <b id="fov-val">78</b></span><input id="set-fov" type="range" min="65" max="100" step="1" value="78"></label>
+    <label class="set-row"><span>GRAFİK KALİTESİ</span><select id="set-quality"><option value="low">Düşük</option><option value="high" selected>Yüksek</option><option value="ultra">Ultra</option></select></label>
+    <label class="set-row"><span>ÖZEL RÖLE SUNUCUSU <small>(opsiyonel, ws:// veya wss://)</small></span><input id="set-relay" type="text" placeholder="Boş = otomatik"></label>
+    <label class="set-row check"><span>EKRAN TİTREMESİ</span><input id="set-shake" type="checkbox" checked></label>
+    <button id="settings-close" class="modal-btn primary">KAYDET ve KAPAT</button>
+  </div>
+</div>
+
+<!-- ============================ MAÇ SONU ============================ -->
+<div id="matchend" class="screen hidden">
+  <div class="modal wide end-modal">
+    <div id="end-title" class="end-title">ZAFER</div>
+    <div id="end-sub" class="end-sub">MAVİ TAKIM KAZANDI</div>
+    <div class="end-stats">
+      <div><span>ÖLDÜRME</span><b id="end-kills">0</b></div>
+      <div><span>ÖLÜM</span><b id="end-deaths">0</b></div>
+      <div><span>İSABET</span><b id="end-acc">0%</b></div>
+      <div><span>SÜRE</span><b id="end-time">00:00</b></div>
+    </div>
+    <button id="end-again" class="modal-btn primary">TEKRAR OYNA</button>
+    <button id="end-menu" class="modal-btn">ANA MENÜ</button>
+  </div>
+</div>
+
+<!-- ============================ DOKUNMATİK KONTROLLER ============================ -->
+<div id="touch-ui">
+  <div id="t-move" class="touch-zone move"><div class="stick"></div></div>
+  <div id="t-look" class="touch-zone look"></div>
+  <div id="t-fire" class="touch-btn fire">ATEŞ</div>
+  <div id="t-aim" class="touch-btn aim">NİŞAN</div>
+  <div id="t-jump" class="touch-btn jump">ZIPLA</div>
+  <div id="t-reload" class="touch-btn reload">ŞARJÖR</div>
+</div>
+
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>
